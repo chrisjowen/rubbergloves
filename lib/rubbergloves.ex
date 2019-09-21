@@ -1,87 +1,21 @@
 defmodule Rubbergloves do
+  @moduledoc """
+    A series of macros, and utilities to help hadling your elixir tonics.
 
-  defmodule Error do
-    defstruct [:reason, :args, children: []]
-  end
+    # Motivation
 
-  defmacro __using__(opts) do
-    module = Keyword.get(opts, :wearer)
+    Phoenix controllers aren't perticularly opnionated about when we should take user input and convert them to structs along with validating the input.
+    Additionally, authorization is left up to the user to decide what stratergy to use.
 
-    quote do
-      import Rubbergloves
-      @before_compile Rubbergloves
-      @module unquote(module)
-      Module.register_attribute(__MODULE__, :phases, accumulate: true, persist: true)
-      @phases :default
-      @phase :default
-    end
-  end
+    Rubbergloves takes a more opinionated view that we should be working with Structs as soon as possible and have a consistent way of validating input whether in
+    both controller methods and dependnet services/contexts/modules.
 
-  defmacro can_handle!(principle, action, conditions \\ nil) do
-    quote do
-      defp handle_check(@phase, @module, unquote(principle), unquote(action), unquote(conditions)) do
-        :ok
-      end
-    end
-  end
+    Ideally the flow would be:
 
-  defmacro can_handle?(principle, action, conditions \\ nil, do: block) do
-    quote do
-      defp handle_check(
-             @phase,
-             @module,
-             unquote(principle) = principle,
-             unquote(action) = action,
-             unquote(conditions) = conditions
-           ) do
+    - Taking controller params input in and convert them a Struct
+    - Run first line validations checks against the Struc and bomb out if its invalid
+    - Use use this Struct as conditions to check user authorization against a specific action
+    - If all well run then and only then execute the controller logic
+  """
 
-        process_check(unquote(block), [@phase, @module, principle, action, conditions])
-      end
-    end
-  end
-
-  defmacro phase(name, do: block) do
-    quote do
-      @phase unquote(name)
-      @phases unquote(name)
-      unquote(block)
-      @phase :default
-    end
-  end
-
-  defmacro __before_compile__(_env) do
-    quote do
-      defp handle_check(phase, type, principle, action, conditions),
-        do: process_check({:error, :no_handler_found}, [@phase, @module, principle, action, conditions])
-
-      def handle(principle, action, conditions \\ nil, phases \\ @phases)
-          when is_map(principle) do
-        struct = Map.get(principle, :__struct__)
-
-        phases
-        |> Enum.reverse()
-        |> Enum.reduce(nil, fn phase, message ->
-          case message do
-            :ok -> :ok
-            %Rubbergloves.Error{} = error ->
-              merge_errors(error, handle_check(phase, struct, principle, action, conditions))
-            nil ->
-             handle_check(phase, struct, principle, action, conditions)
-          end
-        end)
-      end
-
-      defp merge_errors(_, :ok), do: :ok
-      # defp merge_errors({:error, errors}, {:error, next_error}) when is_list(errors), do: {:error, errors ++ [next_error]}
-      defp merge_errors(%Rubbergloves.Error{} = error, %Rubbergloves.Error{}=next_error) do
-        Map.merge(error, %{reason: next_error.reason, children: error.children ++ [next_error]})
-      end
-
-      defp process_check(:ok, _), do: :ok
-      defp process_check(true, _), do: :ok
-      defp process_check({:error, reason}, args), do: %Rubbergloves.Error{args:  args , reason: reason}
-      defp process_check(_, args), do: %Rubbergloves.Error{args: args, reason: :unknown}
-
-    end
-  end
 end

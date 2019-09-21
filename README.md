@@ -1,77 +1,100 @@
 # Rubbergloves
 
-Simple DSL to ensure only authorized users can handle your elixir toxins. 
+A series of macros, and utilities to help hadling your elixir tonics.
 
-# Usage
+# Motivation
 
+Phoenix controllers aren't perticularly opnionated about when we should take user input and convert them to structs along with validating the input.
+Additionally, authorization is left up to the user to decide what stratergy to use. 
 
-1. Define your rubber gloves capabilities
+Rubbergloves takes a more opinionated view that we should be working with Structs as soon as possible and have a consistent way of validating input whether in 
+both controller methods and dependnet services/contexts/modules.
+
+Ideally the flow would be:
+
+- Taking controller params input in and convert them a Struct
+- Run first line validations checks against the Struc and bomb out if its invalid
+- Use use this Struct as conditions to check user authorization against a specific action
+- If all well run then and only then execute the controller logic
+
+# Insatllation
+
+`{:rubbergloves, "~> 0.0.1"}`
+
+# Example
 
 ```
-defmodule MyApp.Gloves do
-  use Rubbergloves, wearer: MyApp.User
+defmodule Example.AuthController do
+  use ExampleWeb, :controller
+  use Rubbergloves.Controller
 
-  can_handle!(%MyApp.User{name: "fred"}, _action, %{precondition: true})
-  can_handle!(%MyApp.User{name: "chris"}, :poision)
-
-end
-```
-
-2. Use the gloves when handling toxins
-
-
-```
-defmodule MyApp.SomeController do
+  action_fallback(Example.FallbackController)
   
-  def index(conn, params) do
-    user = get_user_somehow()
+  import Guardian.Plug
+  alias Example.Dto
+  alias Example.Authorization.DefaultUserGloves
+  alias Example.Accounts
 
-    with :ok <- MyApp.Gloves.handle(user, :read_secret_recipe, params) do
-      fetch_recipe(params["recipe_id"])
-    end
+  @handler_defaults [
+    gloves: DefaultUserGloves,
+    principle_resolver: &current_resource/1
+  ]
 
+  @bind request: Dto.LoginRequest
+  def login(conn, _, request: login_request) do
+    with {:ok, user} <- Accounts.login(login_request) do
+      json(conn, user)
+     end
+  end
+
+  @bind request: Dto.UpdateCredentialsRequest
+  @can_handle :update_user, :request, Example.DefaultUserGloves
+  def update_user(conn, _, request: update_user_request) do
+    with {:ok, user} <- Accounts.update_user(update_user_request) do
+      json(conn, user)
+     end
   end
 
 end
 
-```
-# Further Usage
-## Multi step checks 
+defmodule Example.Dto.LoginRequest do
+  use Rubbergloves.Struct
 
-```
-defmodule MyApp.Gloves do
-  use Rubbergloves, wearer: MyApp.User
+  defstruct [:username, :password, :hashed_password]
 
-  # First we check here
-  phase :explicit_checks do
-    can_handle!(%MyApp.User{ role: "ADMIN"}, :read_secret_recipe)
-  end
- 
-  # If cannot handle then we check the database
-  phase :database_check do
-    can_handle?(user, :read_secret_recipe, %{recipe_id: recipe_id}) do
-      Permissions.can_read_secret_recipe?(user, recipe_id)
-    end
+  defmapping do
+     keys &CamelCaseKeyResolver.resolve/1
+     override :hashed_password, key: "password", value: &hash_password_input/1
   end
 
-end
-```
-
-## Providing Insights
-
-```
-defmodule MyApp.Gloves do
-  use Rubbergloves, wearer: MyApp.User
-
-  # Return boolean to provide no isights
-  can_handle?(user, :read_secret_recipe) do
-    false
+  def validate(request) do
+    request
+    |> Justify.validate_required(:username)
+    |> Justify.validate_required(:password)
   end
 
-   # Optionally return {:error, reason} tuple to give better feedback
-  can_handle?(user, :read_secret_recipe) do
-    {:error, :novice_warlock}
+  def hash_password_input(val) do
+    # TODO: Hash password
+    "SOMEHASHED_PASSWORD_EXAMPLE"
   end
 
 end
-```
+
+defmodule Example.DefaultUserGloves do
+  use Rubbergloves.Handler, wearer: Example.User
+
+  # Hardcoded rules checked first
+  phase :pre_checks do
+    can_handle!(%Example.User{role: :admin}, _any_action) # Admin can do anything
+    can_handle!(%Example.User{name: "Christopher Owen"}, :update_user, request=%DTO.UpdateCredentialsRequest{}) # Hardcoded that I can update users
+    cannot_handle!(_anyone, _any_action) # everyone else CANNOT do anything
+  end
+  
+  # If rejected check database to see if I have explicit permissions
+  phase :registery_check do
+    can_handle?(user, action, conditions) do
+      Repo.one(from r in PermissionsRegistory, where r.user_id == ^user.id and r.action == ^action and r.conditions == ^conditions) != nil
+    end  
+  end
+  
+end

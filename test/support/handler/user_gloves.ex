@@ -1,6 +1,6 @@
 
-defmodule UserGloves do
-  use Rubbergloves, wearer: RubberglovesTest.User
+defmodule RubberglovesTest.UserGloves do
+  use Rubbergloves.Handler, wearer: RubberglovesTest.User
 
   can_handle!(%RubberglovesTest.User{name: "fred"}, _action, %{valid: true})
   can_handle!(%RubberglovesTest.User{name: "chris"}, :poision)

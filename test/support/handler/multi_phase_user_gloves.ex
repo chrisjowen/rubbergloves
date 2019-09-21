@@ -1,10 +1,6 @@
 defmodule MultiPhaseUserGloves do
-  use Rubbergloves, wearer: RubberglovesTest.User
+  use Rubbergloves.Handler, wearer: RubberglovesTest.User
 
-  # Same as
-  # phase :default do
-  #   ...
-  # end
   can_handle?(_everyone, :anything) do
     :ok
   end

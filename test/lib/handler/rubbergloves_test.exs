@@ -1,17 +1,19 @@
 defmodule RubberglovesTest do
   use ExUnit.Case
-  doctest Rubbergloves
+  alias RubberglovesTest.UserGloves
 
   @chris %RubberglovesTest.User{name: "chris"}
   @group1 %RubberglovesTest.Group{name: "group1"}
   @fred %RubberglovesTest.User{name: "fred"}
+  alias Rubbergloves.Errors.HandleError
+
 
   test "cannot handle if not matched" do
-    assert %Rubbergloves.Error{}= UserGloves.handle(@fred, :poision, %{}) |> IO.inspect
+    assert %HandleError{}= UserGloves.handle(@fred, :poision, %{})
   end
 
   test "cannot handle if not matched without conditions" do
-    assert %Rubbergloves.Error{}= UserGloves.handle(@fred, :poision) |> IO.inspect
+    assert %HandleError{}= UserGloves.handle(@fred, :poision)
   end
 
   test "can handle if conditions match with true return" do
@@ -31,7 +33,7 @@ defmodule RubberglovesTest do
   end
 
   test "cannot handle with different wearer" do
-    assert %Rubbergloves.Error{}= MultiPhaseUserGloves.handle(@group1, :anything) |> IO.inspect
+    assert %HandleError{}= MultiPhaseUserGloves.handle(@group1, :anything)
   end
 
   test "can handle in later phase" do
@@ -39,7 +41,7 @@ defmodule RubberglovesTest do
   end
 
   test "can limit phases" do
-    assert %Rubbergloves.Error{}= MultiPhaseUserGloves.handle(@chris, :handled_later, nil, [:default, :before]) |> IO.inspect
+    assert %HandleError{}= MultiPhaseUserGloves.handle(@chris, :handled_later, nil, [:default, :before])
   end
 
 end
