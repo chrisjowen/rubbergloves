@@ -17,9 +17,13 @@ Ideally the flow would be:
 - Use use this Struct as conditions to check user authorization against a specific action
 - If all well run then and only then execute the controller logic
 
-# Insatllation
+# Installation
 
 `{:rubbergloves, "~> 0.0.1"}`
+
+# Docs
+
+https://hexdocs.pm/rubbergloves/0.0.1/api-reference.html
 
 # Example
 

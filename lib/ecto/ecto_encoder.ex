@@ -1,4 +1,8 @@
 defmodule Rubbergloves.EctoEncoder do
+  @moduledoc """
+  Utility to encode ecto structs
+  """
+
   defmodule CamelCaseEncoder do
     def encode({key, val}), do: {to_camel_case(key), encode(val)}
     def encode(%{__struct__: _} = struct), do: struct
@@ -20,13 +24,6 @@ defmodule Rubbergloves.EctoEncoder do
 
   defmacro encode(modules) do
     quote do
-      # defimpl Poison.Encoder, for: Map do
-      #   def encode(map, options) do
-      #     map
-      #     |> CamelCaseEncoder.encode()
-      #   end
-      # end
-
       Enum.map(unquote(modules), fn {module, strip} ->
         defimpl Jason.Encoder, for: module do
           def encode(schema, opts) do

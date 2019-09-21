@@ -1,4 +1,43 @@
 defmodule Rubbergloves.Annotatable do
+  @moduledoc """
+    Add simple annotations to elixir methods which can be used later to do some funkiness see https://medium.com/@cowen/annotations-in-elixir-450015ecdd97
+
+    ## Usage
+    ```
+    defmodule Example do
+      use Rubbergloves.Annotatable, [:bar, :foo]
+
+      @bar true
+      def bar_method do end
+
+      @foo [:test]
+      @bar true
+      def foo_bar_method do end
+
+      def no_annotation_method do end
+
+      @baz "ads"
+      def undefined_annotation_method do end
+    end
+
+    ```
+    And later:
+
+    ```
+      Example.annotations
+    ```
+
+    Gives:
+    ```
+    %{
+      bar_method: [%{annotation: :bar, value: true}],
+      foo_bar_method: [
+        %{annotation: :bar, value: true},
+        %{annotation: :foo, value: [:test]}
+      ]
+    }
+    ```
+  """
   defmacro __using__(args) do
     quote do
       def __on_annotation_(_) do

@@ -1,6 +1,33 @@
 defmodule Rubbergloves.Controller do
   alias Rubbergloves.Errors.Controller.ValidationError
+  @moduledoc """
+  A base controller to simplify input mapping, validation and authorization handlers.
 
+  ## Example
+
+  defmodule Example.AuthController do
+    @handler_defaults [
+      gloves: DefaultUserGloves,
+      principle_resolver: &current_resource/1
+    ]
+    import Guardian.Plug
+
+    use ExampleWeb, :controller
+    use Rubbergloves.Controller
+
+    alias Example.Dto
+    alias Example.Authorization.DefaultUserGloves
+    alias Example.Accounts
+
+    @bind request: Dto.UpdateCredentialsRequest
+    @can_handle :update_user, :request, Example.DefaultUserGloves
+    def update_user(conn, _, request: update_user_request) do
+      with {:ok, user} <- Accounts.update_user(update_user_request) do
+        json(conn, user)
+      end
+    end
+  end
+  """
   def get_or_error(options, key, message) do
     case Keyword.get(options, key) do
       nil -> {:error, message}
