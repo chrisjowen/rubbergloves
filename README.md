@@ -37,7 +37,7 @@ defmodule Example.Dto.LoginRequest do
 
   defmapping do
      keys &CamelCaseKeyResolver.resolve/1
-     override :hashed_password, key: "password", value: &hash_password_input/1
+     override :hashed_password, key: "password", value: &SuperSecretPasswordHasher.hash/1
   end
 
   # Validate however you like, just be sure to implment the Rubbergloves.Validation protocol to cast your result
@@ -45,11 +45,6 @@ defmodule Example.Dto.LoginRequest do
     request
     |> Justify.validate_required(:username)
     |> Justify.validate_required(:password)
-  end
-
-  def hash_password_input(val) do
-    # TODO: Hash password
-    "SOMEHASHED_PASSWORD_EXAMPLE"
   end
 
 end
