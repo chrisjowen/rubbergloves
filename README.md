@@ -88,7 +88,6 @@ defmodule Example.AuthController do
   alias Example.Dto
   alias Example.Accounts
 
-
   # Automatically binds the input to the LoginRequest defined above
   @bind Dto.LoginRequest
   def login(conn, _, login_request) do
@@ -96,7 +95,6 @@ defmodule Example.AuthController do
       json(conn, user)
      end
   end
-
 
   # Automatically bind and checks the rules to see if this user can handle this kind of request
   @can_handle [action: :update_user, gloves: DefaultUserGloves,  principle_resolver: &current_resource/1]
