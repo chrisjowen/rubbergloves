@@ -27,7 +27,7 @@ https://hexdocs.pm/rubbergloves/0.0.2/api-reference.html
 
 # Example
 
-```
+```elixir
 defmodule Example.AuthController do
   use ExampleWeb, :controller
   use Rubbergloves.Controller
@@ -103,3 +103,5 @@ defmodule Example.DefaultUserGloves do
   end
   
 end
+
+```
