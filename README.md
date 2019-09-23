@@ -27,40 +27,9 @@ https://hexdocs.pm/rubbergloves/0.0.2/api-reference.html
 
 # Example
 
+1. Define your input struct, and `use Rubbergloves.Struct` to automatically define mapping. In this case we are mapping input with camelCase string maps given from params
+
 ```elixir
-defmodule Example.AuthController do
-  use ExampleWeb, :controller
-  use Rubbergloves.Controller
-
-  action_fallback(Example.FallbackController)
-  
-  import Guardian.Plug
-  alias Example.Dto
-  alias Example.Authorization.DefaultUserGloves
-  alias Example.Accounts
-
-  @handler_defaults [
-    gloves: DefaultUserGloves,
-    principle_resolver: &current_resource/1
-  ]
-
-  @bind request: Dto.LoginRequest
-  def login(conn, _, request: login_request) do
-    with {:ok, user} <- Accounts.login(login_request) do
-      json(conn, user)
-     end
-  end
-
-  @bind request: Dto.UpdateCredentialsRequest
-  @can_handle :update_user, :request, Example.DefaultUserGloves
-  def update_user(conn, _, request: update_user_request) do
-    with {:ok, user} <- Accounts.update_user(update_user_request) do
-      json(conn, user)
-     end
-  end
-
-end
-
 defmodule Example.Dto.LoginRequest do
   use Rubbergloves.Struct
 
@@ -84,7 +53,11 @@ defmodule Example.Dto.LoginRequest do
   end
 
 end
+```
 
+2. Define who can process these kinds of requests
+
+```elixir
 defmodule Example.DefaultUserGloves do
   use Rubbergloves.Handler, wearer: Example.User
 
@@ -105,3 +78,44 @@ defmodule Example.DefaultUserGloves do
 end
 
 ```
+
+3. Use the annotations based controller bindings 
+
+```elixir
+defmodule Example.AuthController do
+  use ExampleWeb, :controller
+  use Rubbergloves.Controller
+
+  alias Example.Dto
+  alias Example.Authorization.DefaultUserGloves
+  alias Example.Accounts
+
+  @handler_defaults [
+    gloves: DefaultUserGloves,
+    principle_resolver: &Guardian.Plug.current_resource/1
+  ]
+
+  # Automatically binds the input to the LoginRequest defined above
+  @bind request: Dto.LoginRequest
+  def login(conn, _, login_request) do
+    with {:ok, user} <- Accounts.login(login_request) do
+      json(conn, user)
+     end
+  end
+
+  # Automatically binds the input to the UpdateCredentialsRequest defined above
+  @bind request: Dto.UpdateCredentialsRequest
+
+  # Automatically checks the rules to see if this user can handle this kind of request
+  @can_handle [action: :update_user]
+  def update_user(conn, _,update_user_request) do
+    with {:ok, user} <- Accounts.update_user(update_user_request) do
+      json(conn, user)
+     end
+  end
+
+end
+```
+
+
+
