@@ -1,5 +1,5 @@
 defmodule Rubbergloves do
-  @moduledoc """
+  @moduledoc"""
     A series of macros, and utilities to help hadling your elixir tonics.
 
     # Motivation

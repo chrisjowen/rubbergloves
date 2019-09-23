@@ -1,10 +1,10 @@
 defmodule Rubbergloves.Controller do
-  alias Rubbergloves.Errors.Controller.ValidationError
-  @moduledoc """
+  alias Rubbergloves.Validation
+  @moduledoc"""
   A base controller to simplify input mapping, validation and authorization handlers.
 
   ## Example
-
+  ```
   defmodule Example.AuthController do
     @handler_defaults [
       gloves: DefaultUserGloves,
@@ -27,6 +27,7 @@ defmodule Rubbergloves.Controller do
       end
     end
   end
+  ```
   """
   def get_or_error(options, key, message) do
     case Keyword.get(options, key) do
@@ -44,18 +45,18 @@ defmodule Rubbergloves.Controller do
 
       @before_compile {unquote(__MODULE__), :__before_compile__}
 
-      defp get_annotation(annotations, name) do
-        Enum.find(annotations, fn %{annotation: annotation} -> annotation == name end)
+      defp get_attribute(attributes, name) do
+        Enum.find(attributes, fn %{annotation: annotation} -> annotation == name end)
       end
     end
   end
 
-  defmacro make_controller_function(method, annotations) do
-    quote bind_quoted: [method: method, annotations: annotations] do
+  defmacro make_controller_function(method) do
+    quote bind_quoted: [method: method] do
       def unquote(:"#{method}")(conn, params) do
-        annotations = Map.get(annotations, unquote(method))
-        with {:ok, mapping} <- get_annotation(annotations, :bind) |> get_mappings(params),
-             :ok <- get_annotation(annotations, :can_handle) |> authorize(conn, params, mapping) do
+        attributes = Map.get(annotations(), unquote(method))
+        with {:ok, mapping} <- get_attribute(attributes, :bind) |> get_mappings(params),
+             :ok <- get_attribute(attributes, :can_handle) |> authorize(conn, params, mapping) do
             unquote(method)(conn, params, mapping)
         else
           err -> err
@@ -67,29 +68,26 @@ defmodule Rubbergloves.Controller do
   defmacro __before_compile__(_) do
     quote do
       @annotations
-      |> Enum.each(fn {method, annotations} -> make_controller_function(method, annotations) end)
+      |> Enum.each(fn {method, _} ->  make_controller_function(method)
+      end)
 
 
       defp get_mappings(nil, _), do: {:ok, nil}
-
       defp get_mappings(bind, params) do
         module = bind.value
         structure = Rubbergloves.Mapper.map(struct(bind.value), params, module.mappings)
-        validation = module.validate(structure)
+        result = module.validate(structure)
 
-        if(validation.valid?) do
+        if(Validation.valid?(result)) do
           {:ok, structure}
         else
-          {:error, %ValidationError{errors: validation.errors}}
+          {:error, Validation.errors(result)}
         end
       end
 
-      defp authorize(nil), do: :ok
+      defp authorize(nil, _,_,_), do: :ok
       defp authorize(auth, conn, params, mapping) do
-        action = auth.value
-        action = auth.value
         options = auth.value ++ @handler_defaults
-
         with {:ok, action} <- Rubbergloves.Controller.get_or_error(options, :action, ":action required for can_handle? attribute"),
               {:ok, resource_loader} <- Rubbergloves.Controller.get_or_error(options, :principle_resolver, ":resource_loader required for can_handle? attribute"),
               {:ok, gloves} <- Rubbergloves.Controller.get_or_error(options, :gloves, ":gloves required for can_handle? attribute") do

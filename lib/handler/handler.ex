@@ -120,8 +120,7 @@ defmodule Rubbergloves.Handler do
       defp handle_check(phase, type, principle, action, conditions),
         do: process_check({:error, :missing_handler}, [@phase, @module, principle, action, conditions])
 
-      def handle(principle, action, conditions \\ nil, phases \\ @phases)
-          when is_map(principle) do
+      def handle(principle, action, conditions \\ nil, phases \\ @phases) when is_map(principle) do
         struct = Map.get(principle, :__struct__)
         phases
         |> Enum.reverse()

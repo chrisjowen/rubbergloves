@@ -19,11 +19,11 @@ Ideally the flow would be:
 
 # Installation
 
-`{:rubbergloves, "~> 0.0.1"}`
+`{:rubbergloves, "~> 0.0.2"}`
 
 # Docs
 
-https://hexdocs.pm/rubbergloves/0.0.1/api-reference.html
+https://hexdocs.pm/rubbergloves/0.0.2/api-reference.html
 
 # Example
 
@@ -71,6 +71,7 @@ defmodule Example.Dto.LoginRequest do
      override :hashed_password, key: "password", value: &hash_password_input/1
   end
 
+  # Validate however you like, just be sure to implment the Rubbergloves.Validation protocol to cast your result
   def validate(request) do
     request
     |> Justify.validate_required(:username)

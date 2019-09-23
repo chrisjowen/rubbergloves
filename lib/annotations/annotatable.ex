@@ -1,5 +1,5 @@
 defmodule Rubbergloves.Annotatable do
-  @moduledoc """
+  @moduledoc"""
     Add simple annotations to elixir methods which can be used later to do some funkiness see https://medium.com/@cowen/annotations-in-elixir-450015ecdd97
 
     ## Usage
@@ -24,7 +24,7 @@ defmodule Rubbergloves.Annotatable do
     And later:
 
     ```
-      Example.annotations
+      Example.list_annotations()
     ```
 
     Gives:
@@ -72,7 +72,7 @@ defmodule Rubbergloves.Annotatable do
 
   defmacro __before_compile__(_env) do
     quote do
-      def annotations do
+      def annotations() do
          @annotations
       end
 

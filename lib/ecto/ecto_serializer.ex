@@ -1,5 +1,5 @@
 defmodule Rubbergloves.EctoSerializer do
-  @moduledoc """
+  @moduledoc"""
   Utility to serialize ecto structs to maps
   """
 

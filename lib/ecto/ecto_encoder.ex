@@ -1,5 +1,5 @@
 defmodule Rubbergloves.EctoEncoder do
-  @moduledoc """
+  @moduledoc"""
   Utility to encode ecto structs
   """
 
