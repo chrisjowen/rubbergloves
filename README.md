@@ -84,15 +84,10 @@ end
 defmodule Example.AuthController do
   use ExampleWeb, :controller
   use Rubbergloves.Annotations.ControllerAnnotations
-
+  import Guardian.Plug
   alias Example.Dto
-  alias Example.Authorization.DefaultUserGloves
   alias Example.Accounts
 
-  @handler_defaults [
-    gloves: DefaultUserGloves,
-    principle_resolver: &Guardian.Plug.current_resource/1
-  ]
 
   # Automatically binds the input to the LoginRequest defined above
   @bind Dto.LoginRequest
@@ -104,7 +99,7 @@ defmodule Example.AuthController do
 
 
   # Automatically bind and checks the rules to see if this user can handle this kind of request
-  @can_handle [action: :update_user]
+  @can_handle [action: :update_user, gloves: DefaultUserGloves,  principle_resolver: &current_resource/1]
   @bind Dto.UpdateCredentialsRequest
   def update_user(conn, _,update_user_request) do
     with {:ok, user} <- Accounts.update_user(update_user_request) do
