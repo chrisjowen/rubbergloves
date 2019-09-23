@@ -83,7 +83,7 @@ end
 ```elixir
 defmodule Example.AuthController do
   use ExampleWeb, :controller
-  use Rubbergloves.Controller
+  use Rubbergloves.Annotations.ControllerAnnotations
 
   alias Example.Dto
   alias Example.Authorization.DefaultUserGloves
