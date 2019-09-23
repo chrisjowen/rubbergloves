@@ -96,7 +96,7 @@ defmodule Example.AuthController do
   ]
 
   # Automatically binds the input to the LoginRequest defined above
-  @bind request: Dto.LoginRequest
+  @bind Dto.LoginRequest
   def login(conn, _, login_request) do
     with {:ok, user} <- Accounts.login(login_request) do
       json(conn, user)
@@ -104,7 +104,7 @@ defmodule Example.AuthController do
   end
 
   # Automatically binds the input to the UpdateCredentialsRequest defined above
-  @bind request: Dto.UpdateCredentialsRequest
+  @bind Dto.UpdateCredentialsRequest
 
   # Automatically checks the rules to see if this user can handle this kind of request
   @can_handle [action: :update_user]
