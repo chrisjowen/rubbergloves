@@ -65,7 +65,6 @@ defmodule Example.DefaultUserGloves do
   phase :pre_checks do
     can_handle!(%Example.User{role: :admin}, _any_action) # Admin can do anything
     can_handle!(%Example.User{name: "Christopher Owen"}, :update_user, request=%DTO.UpdateCredentialsRequest{}) # Hardcoded that I can update users
-    cannot_handle!(_anyone, _any_action) # everyone else CANNOT do anything
   end
   
   # If rejected check database to see if I have explicit permissions
