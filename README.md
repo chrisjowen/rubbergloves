@@ -19,7 +19,7 @@ Ideally the flow would be:
 
 # Installation
 
-`{:rubbergloves, "~> 0.0.2"}`
+`{:rubbergloves, "~> 0.0.3"}`
 
 # Docs
 
