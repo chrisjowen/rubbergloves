@@ -3,8 +3,9 @@ defmodule Rubbergloves.EctoSerializer do
   Utility to serialize ecto structs to maps
   """
 
-  @exceptions [NaiveDateTime, DateTime]
+  @exceptions Application.get_env(:rubbergloves, :ignore, [NaiveDateTime, DateTime])
   @bloat [:__meta__, :__struct__, :__cardinality__, :__field__, :__owner__]
+
 
   def serialize(schema, modules) when is_map(schema) do
     additional =

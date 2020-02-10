@@ -1,6 +1,12 @@
 defmodule Rubbergloves.Context do
   alias Rubbergloves.Context
 
+  def from_struct(struct) do
+    Map.from_struct(struct)
+    |> Enum.filter(fn {_, v} -> v != nil end)
+    |> Enum.into(%{})
+  end
+
   defmacro __using__(repo: repo) do
     quote do
       alias Rubbergloves.Context
@@ -12,7 +18,7 @@ defmodule Rubbergloves.Context do
   defmacro defcreate(module) do
     name = module_name(module)
     quote do
-      def unquote(:"create_#{name}")(%{__struct__: _} = struct), do: unquote(:"create_#{name}")(Map.from_struct(struct))
+      def unquote(:"create_#{name}")(%{__struct__: _} = struct), do: unquote(:"create_#{name}")(from_struct(struct))
       def unquote(:"create_#{name}")(attrs) do
         %unquote(module){}
         |> unquote(module).changeset(attrs)
@@ -24,7 +30,7 @@ defmodule Rubbergloves.Context do
   defmacro defupdate(module) do
     name = module_name(module)
     quote do
-      def unquote(:"update_#{name}")(%{__struct__: _} = struct), do: unquote(:"update_#{name}")(Map.from_struct(struct))
+      def unquote(:"update_#{name}")(%{__struct__: _} = struct), do: unquote(:"update_#{name}")(from_struct(struct))
       def unquote(:"update_#{name}")(item = %unquote(module){}, attrs) do
         item
         |> unquote(module).changeset(attrs)

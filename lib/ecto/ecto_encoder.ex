@@ -22,7 +22,8 @@ defmodule Rubbergloves.EctoEncoder do
     end
   end
 
-  defmacro encode(modules) do
+
+  defmacro encode(modules, encoder \\ CamelCaseEncoder) do
     quote do
       Enum.map(unquote(modules), fn {module, strip} ->
         defimpl Jason.Encoder, for: module do
