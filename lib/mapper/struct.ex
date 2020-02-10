@@ -81,18 +81,20 @@ defmodule Rubbergloves.Struct  do
     quote do
       require Rubbergloves.Struct
       import Rubbergloves.Struct
-      alias Rubbergloves.Util.CamelCaseKeyResolver
+      alias Rubbergloves.Mapper.CamelCaseKeyResolver
       alias Rubbergloves.Mapper
       @before_compile { unquote(__MODULE__), :__before_compile__ }
       @mappings %Mapper.Options{}
 
       @callback validate(%__MODULE__{}) :: :ok | {:error, any()}
 
-      def many(struct, opts \\ %Mapper.Options{}), do: &many(struct, &1, opts)
+      def many(struct, nil), do: &many(struct, &1, struct.mappings)
+      def many(struct, opts), do: &many(struct, &1, opts)
       defp many(struct, value, opts) when is_list(value), do: value |> Enum.map(&one(struct, &1, opts))
       defp many(_, _, _), do: []
 
-      def one(struct, opts \\ %Mapper.Options{}), do: &one(struct, &1, opts)
+      def one(struct, nil), do: &one(struct, &1, struct.mappings)
+      def one(struct, opts), do: &one(struct, &1, opts)
       defp one(struct, val, opts), do: Mapper.map(struct, val, opts)
     end
   end
@@ -121,12 +123,13 @@ defmodule Rubbergloves.Struct  do
       end
 
       @mappings Map.put(@mappings, :keys,
-        if(unquote(use_value_default), do: unquote(val), else: &__MODULE__.unquote(func_name)/1)
+        if(unquote(use_value_default), do: unquote(val), else: &__MODULE__.unquote(func_name)/2)
       )
     end
   end
 
   defmacro override(struct_key, override) do
+
     key = Keyword.get(override, :key, :default)
     value = Keyword.get(override, :value, :default)
     key_func_name = "#{struct_key}_key" |> String.to_atom
@@ -136,12 +139,12 @@ defmodule Rubbergloves.Struct  do
     use_key_default = key == :default
     use_value_default = value == :default
 
+
     quote do
       localize_function(unquote(key_func_name), unquote(key))
       localize_function(unquote(value_func_name), unquote(value))
-
       overrides = Map.put(Map.get(@mappings, :overrides), unquote(struct_key), %Mapper.Override{
-        key: if(unquote(use_key_default), do: :default, else: &__MODULE__.unquote(key_func_name)/1),
+        key: if(unquote(use_key_default), do: :default, else: &__MODULE__.unquote(key_func_name)/2),
         value: if(unquote(use_value_default), do: :default, else: &__MODULE__.unquote(value_func_name)/1)
       })
       @mappings Map.put(@mappings, :overrides, overrides)
@@ -151,7 +154,8 @@ defmodule Rubbergloves.Struct  do
   defmacro localize_function(name, defenition) do
     if(is_tuple(defenition)) do
       quote do
-        def unquote(name)(input), do: unquote(defenition).(input)
+        def unquote(name)(a), do: unquote(defenition).(a)
+        def unquote(name)(a,b), do: unquote(defenition).(a,b)
       end
     else
       quote do

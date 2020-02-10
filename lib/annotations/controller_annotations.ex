@@ -40,11 +40,11 @@ defmodule Rubbergloves.Annotations.ControllerAnnotations do
   defmacro __using__(_) do
 
     quote do
-      use Rubbergloves.Annotatable, [:bind, :can_handle]
+      use Rubbergloves.Annotatable, [:bind, :can_handle?]
       import Rubbergloves.Annotations.ControllerAnnotations
       @handler_defaults []
       alias Rubbergloves.Errors.Controller.ValidationError
-
+      require Logger
       @before_compile {unquote(__MODULE__), :__before_compile__}
 
       defp get_attribute(attributes, name) do
@@ -57,9 +57,9 @@ defmodule Rubbergloves.Annotations.ControllerAnnotations do
     quote bind_quoted: [method: method] do
       def unquote(:"#{method}")(conn, params) do
         attributes = Map.get(annotations(), unquote(method))
-
         with {:ok, mapping} <- get_attribute(attributes, :bind) |> get_mappings(params),
-             :ok <- get_attribute(attributes, :can_handle) |> authorize(conn, params, mapping) do
+             {:ok, meta} <- get_attribute(attributes, :can_handle?) |> authorize(conn, params, mapping) do
+              Logger.debug("Rubbergloves handler successful, info: (#{inspect(meta, pretty: true)})")
           unquote(method)(conn, params, mapping)
         else
           err -> err
@@ -87,7 +87,7 @@ defmodule Rubbergloves.Annotations.ControllerAnnotations do
         end
       end
 
-      defp authorize(nil, _, _, _), do: :ok
+      defp authorize(nil, _, _, _), do: {:ok, :no_auth}
 
       defp authorize(auth, conn, params, mapping) do
         options = auth.value ++ @handler_defaults
@@ -102,7 +102,7 @@ defmodule Rubbergloves.Annotations.ControllerAnnotations do
                get_or_error(
                  options,
                  :principle_resolver,
-                 ":resource_loader required for can_handle? attribute"
+                 ":principle_resolver required for can_handle? attribute"
                ),
              {:ok, gloves} <-
                get_or_error(

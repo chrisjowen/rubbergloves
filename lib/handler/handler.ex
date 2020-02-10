@@ -57,11 +57,23 @@ defmodule Rubbergloves.Handler do
   end
   ```
   """
+  defmodule Match do
+    defstruct [:phase, :reason,  :success?]
+  end
+
+  defmodule MatchInfo do
+    defstruct [:wearer, :conditions, :action, :handler, matches: []]
+  end
+
+  alias Rubbergloves.Handler.Match
+  alias Rubbergloves.Handler.MatchInfo
+
   defmacro __using__(opts) do
     module = Keyword.get(opts, :wearer)
     quote do
       import Rubbergloves.Handler
-
+      alias Rubbergloves.Handler.Match
+      alias Rubbergloves.Handler.MatchInfo
       @before_compile Rubbergloves.Handler
       @module unquote(module)
       Module.register_attribute(__MODULE__, :phases, accumulate: true, persist: true)
@@ -78,8 +90,8 @@ defmodule Rubbergloves.Handler do
   """
   defmacro can_handle!(principle, action, conditions \\ nil) do
     quote do
-      defp handle_check(@phase, @module, unquote(principle), unquote(action), unquote(conditions)) do
-        :ok
+      defp handle_check(@phase, @module, unquote(principle) = principle, unquote(action) = action, unquote(conditions) = conditions) do
+        process_check(:ok, [@phase, @module, principle, action, conditions])
       end
     end
   end
@@ -92,7 +104,7 @@ defmodule Rubbergloves.Handler do
   >   true
   > end
   """
-  defmacro can_handle?(principle, action, conditions \\ nil, do: block) do
+  defmacro can_handle?(principle, action, conditions \\ nil,  do: block)  do
     quote do
       defp handle_check(
              @phase,
@@ -103,6 +115,18 @@ defmodule Rubbergloves.Handler do
            ) do
         process_check(unquote(block), [@phase, @module, principle, action, conditions])
       end
+    end
+  end
+
+  defmacro phase(name, [handle_by: handler]) do
+    quote do
+      @phase unquote(name)
+      @phases unquote(name)
+      defp handle_check(@phase, @module, principle, action, conditions) do
+        {_, result} = unquote(handler).handle(principle, action, conditions)
+        result
+      end
+      @phase :default
     end
   end
 
@@ -118,32 +142,44 @@ defmodule Rubbergloves.Handler do
   defmacro __before_compile__(_env) do
     quote do
       defp handle_check(phase, type, principle, action, conditions),
-        do: process_check({:error, :missing_handler}, [@phase, @module, principle, action, conditions])
+        do: process_check({:error, :no_matching_handler}, [@phase, @module, principle, action, conditions])
 
       def handle(principle, action, conditions \\ nil, phases \\ @phases) when is_map(principle) do
         struct = Map.get(principle, :__struct__)
-        phases
+        matches = phases
         |> Enum.reverse()
-        |> Enum.reduce(nil, fn phase, message ->
-          case message do
-            :ok -> :ok
-            %Rubbergloves.Errors.HandleError{} = error ->
-              merge_errors(error, handle_check(phase, struct, principle, action, conditions))
-            nil ->
-             handle_check(phase, struct, principle, action, conditions)
-          end
+        |> Enum.reduce([], fn phase, acum  ->
+            if(is_success(acum)) do
+              acum
+            else
+              [handle_check(phase, struct, principle, action, conditions)] ++ acum
+            end
         end)
+
+        info = %MatchInfo{wearer: principle, matches: matches, handler: __MODULE__, action: action, conditions: conditions,}
+        if(is_success(info)) do
+          {:ok, info}
+        else
+          {:error, info}
+        end
       end
+
+      def is_success(%Match{success?: success}), do: success
+      def is_success(matches) when is_list(matches), do: Enum.any?(matches, &is_success/1)
+      def is_success(%MatchInfo{matches: matches}), do: is_success(matches)
+      def is_success(_), do: false
+
 
       defp merge_errors(_, :ok), do: :ok
-      defp merge_errors(%Rubbergloves.Errors.HandleError{} = error, %Rubbergloves.Errors.HandleError{}=next_error) do
-        Map.merge(error, %{reason: next_error.reason, children: error.children ++ [next_error]})
+      defp merge_errors(error, failed_match) do
+        Map.merge(error, :matches, Map.get(error, :matches) ++ failed_match)
       end
 
-      defp process_check(:ok, _), do: :ok
-      defp process_check(true, _), do: :ok
-      defp process_check({:error, reason}, args), do: %Rubbergloves.Errors.HandleError{args: args , reason: reason}
-      defp process_check(_, args), do: %Rubbergloves.Errors.HandleError{args: args, reason: :unknown}
+      defp process_check(:ok, meta), do: success(meta)
+      defp process_check(true, meta), do: success(meta)
+      defp process_check(false, meta), do: process_check({:error, :match_failed}, meta)
+      defp process_check({:error, reason}, [phase, handler, _principle, action, conditions]), do: %Match{phase: phase, reason: reason, success?: false}
+      defp success([phase, handler, _principle, action, conditions]), do: %Match{phase: phase,   success?: true}
     end
   end
 end

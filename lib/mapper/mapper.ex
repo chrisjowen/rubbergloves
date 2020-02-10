@@ -12,16 +12,17 @@ defmodule Rubbergloves.Mapper do
   end
 
   defmodule Options do
-    defstruct [keys: &Rubbergloves.Mapper.IdentityKeyResolver.resolve/1, overrides: %{}]
+    defstruct [keys: &Rubbergloves.Mapper.DynamicKeyResolver.resolve/2, overrides: %{}]
   end
 
-  def map(struct, map, opts \\  %Options{})
-  def map(module, map, nil), do: map(struct(module), map, module.mappings)
+  def map(structOrModule, map, opts \\ %Options{})
+  def map(module, map, nil) when is_atom(module), do: map(struct(module), map, module.mappings)
+  def map(module, map, opts) when is_atom(module), do: map(struct(module), map, opts)
   def map(struct, map, opts) do
     Enum.reduce(keys(struct), struct, fn key, struct ->
       case fetch(map, key, opts) do
         {:ok, v} -> %{struct | key => value(key, v, opts)}
-        :error ->  %{struct | key => default(key, Map.get(struct, key), opts)}
+        :error ->  %{struct | key => Map.get(struct, key)}
       end
     end)
   end
@@ -30,8 +31,9 @@ defmodule Rubbergloves.Mapper do
   defp fetch(map, key, %Options{keys: key_fun}=options) when is_function(key_fun), do: fetch(map, key, key_fun, options)
   defp fetch(map, key, fun, %Options{overrides: overrides}) when is_function(fun) do
     case Map.get(overrides, key) do
-      nil -> Map.fetch(map, fun.(key))
-      %Override{key: key_fn} when is_function(key_fn) -> Map.fetch(map, key_fn.(key))
+      nil -> Map.fetch(map, fun.(key, map))
+      %Override{key: :default} ->  Map.fetch(map, fun.(key, map))
+      %Override{key: key_fn} when is_function(key_fn) -> Map.fetch(map, key_fn.(key, map))
       %Override{key: new_key} -> Map.fetch(map, new_key)
     end
   end

@@ -10,8 +10,6 @@ defprotocol Rubbergloves.Validation do
 end
 
 
-
-
 defimpl Rubbergloves.Validation, for: Any do
   alias Rubbergloves.Errors.Validation.ValidationError
 

@@ -10,10 +10,10 @@ defmodule Rubbergloves.EctoEncoder do
     def encode(list) when is_list(list), do: Enum.map(list, &encode/1)
     def encode(val), do: val
 
-    defp to_camel_case(key) when is_atom(key) do
+    defp to_camel_case(key) when is_atom(key), do: to_camel_case(Atom.to_string(key))
+    defp to_camel_case(key) do
       [h | t] =
         key
-        |> Atom.to_string()
         |> Macro.camelize()
         |> String.split("", trim: true)
 
